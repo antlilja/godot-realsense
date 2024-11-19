@@ -34,4 +34,5 @@ public:
 	void open();
 	void close();
 	PackedByteArray get_colour_image();
+	PackedByteArray get_depth_image();
 };
