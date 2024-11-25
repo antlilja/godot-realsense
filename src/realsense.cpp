@@ -28,10 +28,10 @@ RealSense::RealSense()
 	ERR_FAIL_COND(singleton != nullptr);
 	singleton = this;
 
-	colour_image_data.resize(1920 * 1080 * 3);
+	colour_image_data.resize(1280 * 720 * 3);
 	colour_image_data.fill(0);
 
-	depth_image_data.resize(848 * 480 * 2);
+	depth_image_data.resize(1280 * 720 * 2);
 	depth_image_data.fill(0);
 
 	UtilityFunctions::print("RealSense library initialized");
@@ -48,9 +48,22 @@ RealSense::~RealSense()
 void RealSense::open()
 {
 	rs2::config cfg;
-	cfg.enable_stream(RS2_STREAM_COLOR, 1920, 1080, RS2_FORMAT_RGB8, 30);
-	cfg.enable_stream(RS2_STREAM_DEPTH, RS2_FORMAT_Z16);
-	pipe.start(cfg);
+	cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8);
+	cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16);
+	auto profile = pipe.start(cfg);
+
+	bool found_colour_stream = false;
+	for(const auto& sp : profile.get_streams()) {
+	  rs2_stream profile_stream = sp.stream_type();
+	  if (profile_stream == RS2_STREAM_COLOR)
+    {
+    	align = std::make_unique<rs2::align>(profile_stream);
+    	found_colour_stream = true;
+    	break;
+    }
+	}
+
+	ERR_FAIL_COND(!found_colour_stream);
 }
 
 void RealSense::close()
@@ -62,11 +75,14 @@ bool RealSense::poll_frame()
 {
 	rs2::frameset frames;
 	if(pipe.poll_for_frames(&frames)) {
-		auto colour = frames.get_color_frame();
+		auto aligned = align->process(frames);
+
+		auto depth = hole_filter.process(aligned.get_depth_frame());
+		
+		auto colour = aligned.get_color_frame();
 		memcpy(colour_image_data.begin().operator->(), colour.get_data(), colour.get_width() * colour.get_height() * colour.get_bytes_per_pixel());
 
-		auto depth = frames.get_depth_frame();
-		memcpy(depth_image_data.begin().operator->(), depth.get_data(), depth.get_width() * depth.get_height() * depth.get_bytes_per_pixel());
+		memcpy(depth_image_data.begin().operator->(), depth.get_data(), 1280 * 720 * 2);
 
 		return true;
 	} 

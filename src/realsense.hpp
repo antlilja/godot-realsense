@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <godot_cpp/classes/object.hpp>
 #include <godot_cpp/core/class_db.hpp>
 
@@ -17,6 +19,8 @@ class RealSense : public Object
 
 	rs2::context context;
 	rs2::pipeline pipe;
+	std::unique_ptr<rs2::align> align;
+	rs2::hole_filling_filter hole_filter;
 
 	PackedByteArray colour_image_data;
 	PackedByteArray depth_image_data;
