@@ -77,7 +77,10 @@ bool RealSense::poll_frame()
 	if(pipe.poll_for_frames(&frames)) {
 		auto aligned = align->process(frames);
 
-		auto depth = hole_filter.process(aligned.get_depth_frame());
+		auto depth = aligned.get_depth_frame();
+		depth = hole_filter.process(depth);
+		depth = spatial_filter.process(depth);
+		depth = temporal_filter.process(depth);
 		
 		auto colour = aligned.get_color_frame();
 		memcpy(colour_image_data.begin().operator->(), colour.get_data(), colour.get_width() * colour.get_height() * colour.get_bytes_per_pixel());
